@@ -8,9 +8,9 @@ export async function getServerSideProps() {
   const env = getEnv();
 
   // await initializeDb({ name: 'root' });
-  // await initializeDb({ name: 'hscc-api-drive' });
+  // await initializeDb({ name: 'hscc-slack' });
   // ! Careful when using these to populate production: they can be destructive!
-  // await hydrateDb({ name: 'hscc-api-drive' });
+  // await hydrateDb({ name: 'hscc-slack' });
   // ! Uncommenting this for prod is usually unnecessary
   // await hydrateDb({ name: 'root' });
 
@@ -32,7 +32,7 @@ export default function Index({
     <React.Fragment>
       <p>
         Serverless node runtime: <strong>{nodeVersion}</strong> <br />
-        BDPADrive runtime: <strong>{`v${pkgVersion}`}</strong>
+        BDPABot (Slack bot) runtime: <strong>{`v${pkgVersion}`}</strong>
         <br />
       </p>
       <p>
