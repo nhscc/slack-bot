@@ -1,12 +1,12 @@
 import { middlewareFactory } from 'multiverse/next-api-glue';
 
-import addRawBody, {
-  Options as AddRawBodyOptions
-} from 'multiverse/next-adhesive/add-raw-body';
-
 import logRequest, {
   Options as LogRequestOptions
 } from 'multiverse/next-adhesive/log-request';
+
+import addRawBody, {
+  Options as AddRawBodyOptions
+} from 'multiverse/next-adhesive/add-raw-body';
 
 import authSlackRequest, {
   Options as AuthSlackRequestOptions
@@ -34,14 +34,14 @@ import handleError, {
  */
 /* istanbul ignore next */
 const withMiddleware = middlewareFactory<
-  AddRawBodyOptions &
-    LogRequestOptions &
+  LogRequestOptions &
+    AddRawBodyOptions &
     AuthSlackRequestOptions &
     LimitRequestOptions &
     CheckMethodOptions &
     HandleErrorOptions
 >({
-  use: [addRawBody, logRequest, authSlackRequest, limitRequest, checkMethod],
+  use: [logRequest, addRawBody, authSlackRequest, limitRequest, checkMethod],
   useOnError: [handleError]
 });
 
