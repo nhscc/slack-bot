@@ -1,8 +1,9 @@
 import { sendHttpUnauthenticated } from 'multiverse/next-api-respond';
 import { debugFactory } from 'multiverse/debug-extended';
 import { ensureNextApiRequestHasRawBody } from 'multiverse/next-adhesive/add-raw-body';
-import { ErrorMessage } from 'named-app-errors';
+import { ErrorMessage, GuruMeditationError } from 'named-app-errors';
 import { getEnv } from 'universe/backend/env';
+import { webcrypto as crypto } from 'node:crypto';
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import type { MiddlewareContext } from 'multiverse/next-api-glue';
@@ -59,13 +60,9 @@ export default async function (
   if (context.options.requiresSlackAuth) {
     const { valid, error } = await isValidSlackRequest(req);
 
-    if (!valid || error) {
-      debug(
-        `request authentication failed: ${
-          error || 'unable to verify request originated from Slack'
-        }`
-      );
-      sendHttpUnauthenticated(res);
+    if (!valid) {
+      debug(`request authentication failed: ${error}`);
+      sendHttpUnauthenticated(res, { error });
     } else {
       debug('request authentication succeeded');
     }
@@ -81,7 +78,8 @@ export default async function (
  */
 async function isValidSlackRequest(
   req: NextApiRequest
-): Promise<{ valid: boolean; error?: string }> {
+): Promise<{ valid: true; error: undefined } | { valid: false; error: string }> {
+  /* istanbul ignore else */
   if (ensureNextApiRequestHasRawBody(req)) {
     const fiveMinutesAgoSec = Math.floor(Date.now() / 1000) - 60 * 5;
     const reqTimestampSec = Number.parseInt(
@@ -141,11 +139,23 @@ async function isValidSlackRequest(
       )
     );
 
-    return {
-      valid: reqSignatureHash.toLowerCase() === computedSignatureHash.toLowerCase(),
-      error: undefined
-    };
+    const valid = reqSignatureHash.toLowerCase() === computedSignatureHash.toLowerCase();
+
+    return valid
+      ? {
+          valid: true,
+          error: undefined
+        }
+      : {
+          valid: false,
+          error: ErrorMessage.InvalidItem(
+            reqSignatureHash,
+            'x-slack-signature header hash'
+          )
+        };
   }
 
-  return { valid: false, error: undefined };
+  // * Technically this is dead code as it is not possible to reach this line
+  /* istanbul ignore next */
+  throw new GuruMeditationError();
 }
