@@ -1,5 +1,6 @@
 import cloneDeep from 'clone-deep';
 import { ObjectId } from 'mongodb';
+import { mockDateNowMs } from 'multiverse/jest-mock-date';
 
 import {
   BANNED_BEARER_TOKEN,
@@ -13,22 +14,7 @@ import type { InternalAuthEntry } from 'multiverse/next-auth';
 import type { InternalLimitedLogEntry } from 'multiverse/next-limit';
 import type { InternalRequestLogEntry } from 'multiverse/next-log';
 
-export const generatedAt = Date.now();
-
-/**
- * Sets up a Jest spy on the `Date` object's `now` method such that it returns
- * `generatedAt` rather than the actual date. If you want to restore the mock,
- * you will have to do so manually (or use Jest configuration to do so
- * automatically).
- *
- * This is useful when testing against/playing with dummy data containing values
- * derived from the current time (i.e. unix epoch).
- */
-export function useMockDateNow() {
-  beforeEach(() => {
-    jest.spyOn(Date, 'now').mockImplementation(() => generatedAt);
-  });
-}
+export * from 'multiverse/jest-mock-date';
 
 /**
  * A JSON representation of the backend Mongo database structure. This is used
@@ -92,7 +78,7 @@ export type DummyRootData = {
  * Test data for the well-known `root` database.
  */
 export const dummyRootData: DummyRootData = {
-  _generatedAt: generatedAt,
+  _generatedAt: mockDateNowMs,
   auth: [
     {
       _id: new ObjectId(),
@@ -119,16 +105,16 @@ export const dummyRootData: DummyRootData = {
     header: ndx % 2 ? null : `bearer ${BANNED_BEARER_TOKEN}`,
     method: ndx % 3 ? 'GET' : 'POST',
     route: 'fake/route',
-    createdAt: generatedAt + 10 ** 6,
+    createdAt: mockDateNowMs + 10 ** 6,
     resStatusCode: 200
   })),
   'limited-log': [
-    { _id: new ObjectId(), ip: '1.2.3.4', until: generatedAt + 1000 * 60 * 15 },
-    { _id: new ObjectId(), ip: '5.6.7.8', until: generatedAt + 1000 * 60 * 15 },
+    { _id: new ObjectId(), ip: '1.2.3.4', until: mockDateNowMs + 1000 * 60 * 15 },
+    { _id: new ObjectId(), ip: '5.6.7.8', until: mockDateNowMs + 1000 * 60 * 15 },
     {
       _id: new ObjectId(),
       header: `bearer ${BANNED_BEARER_TOKEN}`,
-      until: generatedAt + 1000 * 60 * 60
+      until: mockDateNowMs + 1000 * 60 * 60
     }
   ]
 };

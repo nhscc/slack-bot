@@ -2,7 +2,7 @@ import { BANNED_BEARER_TOKEN } from 'multiverse/next-auth';
 import { setupMemoryServerOverride } from 'multiverse/mongo-test';
 import { GuruMeditationError } from 'universe/error';
 import { getDb } from 'multiverse/mongo-schema';
-import { generatedAt, useMockDateNow } from 'multiverse/mongo-common';
+import { mockDateNowMs, useMockDateNow } from 'multiverse/mongo-common';
 
 import {
   mockEnvFactory,
@@ -110,7 +110,7 @@ it('rejects on bad environment', async () => {
 it('rate limits only those ips and auth headers that exceed limits', async () => {
   expect.hasAssertions();
 
-  const now = ((n: number) => n - (n % 5000) - 1000)(generatedAt);
+  const now = ((n: number) => n - (n % 5000) - 1000)(mockDateNowMs);
 
   await (await getRateLimitsCollection()).deleteMany({});
   await (await getRequestLogCollection()).updateMany({}, { $set: { createdAt: now } });
@@ -192,7 +192,7 @@ it('rate limits with respect to invocation interval', async () => {
     throw new GuruMeditationError('No request-log entry found?!');
   }
 
-  const now = ((_now: number) => _now - (_now % 5000) - 2000)(generatedAt);
+  const now = ((_now: number) => _now - (_now % 5000) - 2000)(mockDateNowMs);
 
   await requestLogDb.updateMany(
     { header: `bearer ${BANNED_BEARER_TOKEN}` },
@@ -229,7 +229,7 @@ it('repeat offenders are punished to the maximum extent', async () => {
     await getRequestLogCollection()
   ).updateMany({ header: `bearer ${BANNED_BEARER_TOKEN}` }, { $set: { ip: '9.8.7.6' } });
 
-  const now = generatedAt;
+  const now = mockDateNowMs;
   let untils;
 
   await withMockedEnv(importBanHammer, {
