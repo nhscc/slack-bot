@@ -18,8 +18,8 @@ import '@testing-library/jest-dom/extend-expect';
 
 import type { Debugger } from 'multiverse/debug-extended';
 import type { SimpleGit } from 'simple-git';
-import type { NextApiHandler, NextApiRequest, NextApiResponse } from 'next';
-import { Promisable } from 'type-fest';
+import type { NextApiHandler, NextApiRequest, NextApiResponse, PageConfig } from 'next';
+import type { Promisable } from 'type-fest';
 
 const { writeFile, access: accessFile } = fs;
 const debug = debugFactory(`${debugNamespace}:jest-setup`);
@@ -49,11 +49,11 @@ export const noopHandler = async (_req: NextApiRequest, res: NextApiResponse) =>
 
 /**
  * This function wraps mock Next.js API handler functions so that they provide
- * the default API configuration object.
+ * the default (or a custom) API configuration object.
  */
-export const wrapHandler = (handler: NextApiHandler) => {
+export const wrapHandler = (handler: NextApiHandler, config?: PageConfig) => {
   const api = async (req: NextApiRequest, res: NextApiResponse) => handler(req, res);
-  api.config = defaultConfig;
+  api.config = config || defaultConfig;
   return api;
 };
 
