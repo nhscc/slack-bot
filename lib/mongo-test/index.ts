@@ -213,7 +213,7 @@ export function setupMemoryServerOverride(params?: {
 
   afterAll(async () => {
     await closeClient();
-    await server.stop(true);
+    await server.stop({ force: true });
   });
 
   return { reinitializeServer };
