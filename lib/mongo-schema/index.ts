@@ -17,8 +17,17 @@ type createIndexParams = Parameters<Db['createIndex']>;
  * An internal cache of connection, server schema, and database state.
  */
 export type InternalMemory = {
+  /**
+   * Memoized resolved database schemas and aliases.
+   */
   schema: DbSchema | null;
+  /**
+   * Memoized MongoDB driver client connection.
+   */
   client: MongoClient | null;
+  /**
+   * Memoized MongoDB driver Database instances.
+   */
   databases: Record<string, Db>;
 };
 
@@ -26,8 +35,19 @@ export type InternalMemory = {
  * A configuration object representing a MongoDB collection.
  */
 export type CollectionSchema = {
+  /**
+   * The valid MongoDB name of the collection.
+   */
   name: string;
+  /**
+   * An object passed directly to the MongoDB `createCollection` function via
+   * the `createOptions` parameter.
+   */
   createOptions?: Parameters<Db['createCollection']>[1];
+  /**
+   * An object representing indices to be created on the MongoDB collection via
+   * `createIndex`.
+   */
   indices?: {
     spec: createIndexParams[1];
     options?: createIndexParams[2];
@@ -35,12 +55,16 @@ export type CollectionSchema = {
 };
 
 /**
- * A configuration object representing a MongoDB database.
+ * A configuration object representing one or more MongoDB databases and their
+ * aliases.
  */
 export type DbSchema = {
   databases: Record<
     string,
     {
+      /**
+       * An array of MongoDB collections.
+       */
       collections: (string | CollectionSchema)[];
     }
   >;
@@ -123,8 +147,8 @@ export async function closeClient() {
 }
 
 /**
- * Accepts a database alias and returns its real name. If the actual database
- * is not listed in the schema, an error is thrown.
+ * Accepts a database alias (or real name) and returns its real name. If the
+ * actual database is not listed in the schema, an error is thrown.
  */
 export async function getNameFromAlias(alias: string) {
   const schema = await getSchemaConfig();
