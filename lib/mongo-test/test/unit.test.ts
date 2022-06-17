@@ -57,7 +57,6 @@ beforeEach(() => {
         'fake-db-1': {
           collections: ['col']
         },
-
         'fake-db-2': {
           collections: [
             'col-1',
