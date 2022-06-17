@@ -41,7 +41,7 @@ export type Options = {
    *
    * @see https://api.slack.com/authentication/verifying-requests-from-slack
    */
-  requiresSlackAuth: boolean;
+  requiresSlackAuth?: boolean;
 };
 
 /**
