@@ -1,3 +1,4 @@
+import { getEnv } from 'universe/backend/env';
 import { middlewareFactory } from 'multiverse/next-api-glue';
 
 import logRequest, {
@@ -42,7 +43,8 @@ const withMiddleware = middlewareFactory<
     HandleErrorOptions
 >({
   use: [logRequest, addRawBody, authSlackRequest, limitRequest, checkMethod],
-  useOnError: [handleError]
+  useOnError: [handleError],
+  options: { requestBodySizeLimit: getEnv().MAX_CONTENT_LENGTH_BYTES }
 });
 
 export { withMiddleware };
