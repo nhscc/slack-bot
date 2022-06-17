@@ -71,8 +71,8 @@ export async function getDummyData(): Promise<DummyData> {
 }
 
 /**
- * Fill an initialized database with data. You should call `initializeDb` before
- * calling this function.
+ * Fill an initialized database with data. You should call {@link initializeDb}
+ * before calling this function.
  */
 export async function hydrateDb({
   name
