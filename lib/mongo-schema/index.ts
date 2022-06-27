@@ -90,6 +90,7 @@ export function getInitialInternalMemoryState(): InternalMemory {
  */
 export async function getSchemaConfig(): Promise<DbSchema> {
   if (memory.schema) {
+    debug('returning schema configuration from memory');
     return memory.schema;
   } else {
     try {

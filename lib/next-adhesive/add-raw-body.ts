@@ -4,6 +4,7 @@ import { debugFactory } from 'multiverse/debug-extended';
 import { parse } from 'content-type';
 import getRawBody, { RawBodyError } from 'raw-body';
 import querystring from 'node:querystring';
+import { isError } from '@xunnamius/types';
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import type { MiddlewareContext } from 'multiverse/next-api-glue';
@@ -14,7 +15,7 @@ const debug = debugFactory('next-adhesive:add-raw-body');
 const defaultRequestBodySizeLimit = '1mb';
 
 const isRawBodyError = (e: unknown): e is RawBodyError => {
-  return typeof (e as RawBodyError).type == 'string';
+  return isError(e) && typeof (e as RawBodyError).type == 'string';
 };
 
 /**
@@ -107,7 +108,7 @@ export default async function (
       'NextApiRequest object already has a defined "rawBody" property (is the add-raw-body middleware obsolete?)'
     );
   } else {
-    debug('using custom body parsing');
+    debug('adding "rawBody" property to request object via custom body parsing');
 
     // * The below code was adapted from https://xunn.at/source-nextjs-parsebody
 
@@ -140,6 +141,7 @@ export default async function (
       finalReq.rawBody = buffer;
 
       if (type === 'application/json' || type === 'application/ld+json') {
+        debug('secondary parsing of body as JSON data');
         if (finalReq.rawBody.length === 0) {
           // special-case empty json body, as it's a common client-side mistake
           finalReq.body = {};
@@ -151,8 +153,10 @@ export default async function (
           }
         }
       } else if (type === 'application/x-www-form-urlencoded') {
+        debug('secondary parsing of body as urlencoded form data');
         finalReq.body = querystring.decode(finalReq.rawBody);
       } else {
+        debug('no secondary parsing of body (passthrough)');
         finalReq.body = finalReq.rawBody;
       }
     }

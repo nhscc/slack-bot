@@ -31,9 +31,12 @@ export function getCommonSchemaConfig(additionalSchemaConfig?: DbSchema): DbSche
           {
             name: 'auth',
             indices: [
-              { spec: 'token.bearer', options: { unique: true } },
-              // ? To ensure the index is hit, order matters
-              { spec: ['scheme', 'token'] }
+              { spec: 'attributes.owner' },
+              // ! When performing equality matches on embedded documents, field
+              // ! order matters and the embedded documents must match exactly.
+              // * https://xunn.at/mongo-docs-query-embedded-docs
+              // ! Additionally, field order determines internal sort order.
+              { spec: ['scheme', 'token'], options: { unique: true } }
             ]
           },
           {
@@ -80,21 +83,22 @@ export type DummyRootData = {
 export const dummyRootData: DummyRootData = {
   _generatedAt: mockDateNowMs,
   auth: [
+    // ! Must maintain order or various unit tests will fail
     {
       _id: new ObjectId(),
-      owner: { name: 'local developer' },
+      attributes: { owner: 'local developer', isGlobalAdmin: true },
       scheme: 'bearer',
       token: { bearer: DEV_BEARER_TOKEN }
     },
     {
       _id: new ObjectId(),
-      owner: { name: 'dummy owner' },
+      attributes: { owner: 'dummy owner' },
       scheme: 'bearer',
       token: { bearer: DUMMY_BEARER_TOKEN }
     },
     {
       _id: new ObjectId(),
-      owner: { name: 'banned dummy owner' },
+      attributes: { owner: 'banned dummy owner' },
       scheme: 'bearer',
       token: { bearer: BANNED_BEARER_TOKEN }
     }
@@ -109,6 +113,7 @@ export const dummyRootData: DummyRootData = {
     resStatusCode: 200
   })),
   'limited-log': [
+    // ! Must maintain order or various unit tests will fail
     { _id: new ObjectId(), ip: '1.2.3.4', until: mockDateNowMs + 1000 * 60 * 15 },
     { _id: new ObjectId(), ip: '5.6.7.8', until: mockDateNowMs + 1000 * 60 * 15 },
     {
