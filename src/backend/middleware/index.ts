@@ -5,6 +5,10 @@ import logRequest, {
   Options as LogRequestOptions
 } from 'multiverse/next-adhesive/log-request';
 
+import authRequest, {
+  Options as AuthRequestOptions
+} from 'multiverse/next-adhesive/auth-request';
+
 import addRawBody, {
   Options as AddRawBodyOptions
 } from 'multiverse/next-adhesive/add-raw-body';
@@ -20,6 +24,10 @@ import limitRequest, {
 import checkMethod, {
   Options as CheckMethodOptions
 } from 'multiverse/next-adhesive/check-method';
+
+import checkContentType, {
+  Options as CheckContentTypeOptions
+} from 'multiverse/next-adhesive/check-content-type';
 
 import handleError, {
   Options as HandleErrorOptions
@@ -40,11 +48,45 @@ const withMiddleware = middlewareFactory<
     AuthSlackRequestOptions &
     LimitRequestOptions &
     CheckMethodOptions &
+    CheckContentTypeOptions &
     HandleErrorOptions
 >({
-  use: [logRequest, addRawBody, authSlackRequest, limitRequest, checkMethod],
+  use: [
+    logRequest,
+    addRawBody,
+    authSlackRequest,
+    limitRequest,
+    checkMethod,
+    checkContentType
+  ],
   useOnError: [handleError],
   options: { requestBodySizeLimit: getEnv().MAX_CONTENT_LENGTH_BYTES }
 });
 
-export { withMiddleware };
+/**
+ * Middleware runner for the special /sys API endpoints. Decorates a request
+ * handler.
+ *
+ * Passing `undefined` as `handler` or not calling `res.end()` (and not sending
+ * headers) in your handler or use chain will trigger an `HTTP 501 Not
+ * Implemented` response. This can be used to to stub out endpoints and their
+ * middleware for later implementation.
+ */
+/* istanbul ignore next */
+const withSysMiddleware = middlewareFactory<
+  LogRequestOptions &
+    AuthRequestOptions &
+    LimitRequestOptions &
+    CheckMethodOptions &
+    CheckContentTypeOptions &
+    HandleErrorOptions
+>({
+  use: [logRequest, authRequest, limitRequest, checkMethod, checkContentType],
+  useOnError: [handleError],
+  options: {
+    allowedContentTypes: ['application/json'],
+    requiresAuth: { constraints: 'isGlobalAdmin' }
+  }
+});
+
+export { withMiddleware, withSysMiddleware };

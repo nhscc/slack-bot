@@ -46,7 +46,8 @@ export type Options = {
 
 /**
  * Rejects unauthenticatable requests (via `X-Slack-Signature` and
- * `X-Slack-Request-Timestamp` headers).
+ * `X-Slack-Request-Timestamp` headers). This middleware must come after
+ * add-raw-body.
  *
  * @see https://api.slack.com/authentication/verifying-requests-from-slack
  */

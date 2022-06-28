@@ -1,7 +1,8 @@
 import { getCommonSchemaConfig } from 'multiverse/mongo-common';
 
-import type { ObjectId, WithId } from 'mongodb';
+import type { ObjectId, WithId, WithoutId } from 'mongodb';
 import type { DbSchema } from 'multiverse/mongo-schema';
+import { AppValidationError } from 'named-app-errors';
 
 /**
  * A JSON representation of the backend Mongo database structure. This is used
@@ -44,7 +45,7 @@ export function getSchemaConfig(): DbSchema {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-empty-interface
-export interface PermissionId extends ObjectId {}
+export interface ChapterId extends ObjectId {}
 // eslint-disable-next-line @typescript-eslint/no-empty-interface
 export interface ApiId extends ObjectId {}
 
@@ -64,7 +65,61 @@ export type InternalChapter = WithId<{
  */
 export type InternalApi = WithId<{
   name: string;
-  uri: string;
-  authVersion: 'legacy' | 'next-auth';
-  lastUnbanAt: number | null;
+  baseUri: string;
+  latestUnbans: {
+    ip: { [chapter: string]: number };
+    key: { [chapter: string]: number };
+  };
 }>;
+
+/**
+ * The shape of a public chapters item.
+ */
+export type PublicChapter = WithoutId<Pick<InternalChapter, 'name'>>;
+
+/**
+ * The shape of a public apis item.
+ */
+export type PublicApi = WithoutId<Pick<InternalApi, 'baseUri' | 'name'>>;
+
+/**
+ * A MongoDB PublicChapter projection.
+ */
+export const publicChapterProjection = { _id: false, name: true };
+
+/**
+ * A MongoDB PublicApi projection.
+ */
+export const publicApiProjection = { _id: false, name: true, baseUri: true };
+
+/**
+ * Type guard for the {@link InternalChapter} type.
+ */
+export function isInternalChapter(object: unknown): object is InternalChapter {
+  return !!(object as InternalChapter).administrators;
+}
+
+/**
+ * Type guard for the {@link InternalApi} type.
+ */
+export function isInternalApi(object: unknown): object is InternalApi {
+  return !!(object as InternalApi).baseUri;
+}
+
+/**
+ * Translates an internal DB entry into an item that is safe for public
+ * consumption.
+ */
+export function toPublicEntry(entry: InternalChapter): PublicChapter;
+export function toPublicEntry(entry: InternalApi): PublicApi;
+export function toPublicEntry(
+  entry: InternalChapter | InternalApi
+): PublicChapter | PublicApi {
+  if (isInternalChapter(entry)) {
+    return { name: entry.name };
+  } else if (isInternalApi(entry)) {
+    return { name: entry.name, baseUri: entry.baseUri };
+  } else {
+    throw new AppValidationError('unable to translate object into a public entry');
+  }
+}

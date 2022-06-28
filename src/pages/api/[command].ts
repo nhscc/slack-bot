@@ -12,6 +12,7 @@ export default withMiddleware(
   },
   {
     options: {
+      allowedContentTypes: ['application/x-www-form-urlencoded'],
       allowedMethods: ['POST'],
       requiresSlackAuth: true,
       requestBodySizeLimit: defaultConfig.api?.bodyParser
