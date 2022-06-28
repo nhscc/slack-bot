@@ -20,6 +20,8 @@ export type DummyAppData = {
   apis: InternalApi[];
 };
 
+const knownChapterId = new ObjectId();
+
 /**
  * Test data for the application database.
  */
@@ -28,7 +30,7 @@ export const dummyAppData: DummyAppData = {
   // ! Order matters in unit and integration tests, so APPEND ONLY
   chapters: [
     {
-      _id: new ObjectId(),
+      _id: knownChapterId,
       name: 'chapter-1',
       administrators: { primary: ['U012ABCDEF'], secondary: [] }
     },
@@ -46,24 +48,30 @@ export const dummyAppData: DummyAppData = {
   apis: [
     {
       _id: new ObjectId(),
-      name: 'api-name-1',
-      uri: 'mongodb-uri-1',
-      authVersion: 'legacy',
-      lastUnbanAt: null
+      name: 'legacy-api-name-1',
+      baseUri: 'https://mongodb.uri.1.com',
+      latestUnbans: {
+        ip: {},
+        key: {}
+      }
     },
     {
       _id: new ObjectId(),
-      name: 'api-name-2',
-      uri: 'mongodb-uri-2',
-      authVersion: 'next-auth',
-      lastUnbanAt: null
+      name: 'latest-api-name-2',
+      baseUri: 'https://mongodb.uri.2.com',
+      latestUnbans: {
+        ip: { [knownChapterId.toString()]: mockDateNowMs - 10 ** 5 },
+        key: {}
+      }
     },
     {
       _id: new ObjectId(),
-      name: 'api-name-3',
-      uri: 'mongodb-uri-3',
-      authVersion: 'next-auth',
-      lastUnbanAt: mockDateNowMs - 10 ** 5
+      name: 'latest-api-name-3',
+      baseUri: 'https://mongodb.uri.3.com',
+      latestUnbans: {
+        ip: {},
+        key: { [knownChapterId.toString()]: mockDateNowMs - 10 ** 5 }
+      }
     }
   ]
 };

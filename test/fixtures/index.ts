@@ -62,6 +62,11 @@ export const SLACK_CLIENT_SECRET = '12345678912345678912345678912345';
 export const SLACK_SIGNING_SECRET = '8f742231b10e8888abcd99yyyzzz85a5';
 
 /**
+ * Dummy global HSCC API admin key.
+ */
+export const DUMMY_GLOBAL_ADMIN_KEY = '012345-67890-12345-6789';
+
+/**
  * The entire live API topology gathered together into one convenient object.
  */
 export const api = {

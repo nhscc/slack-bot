@@ -7,37 +7,75 @@ import { dummyAppData } from 'testverse/db';
 import { mockEnvFactory } from 'testverse/setup';
 import { getEnv } from 'universe/backend/env';
 import { ErrorMessage } from 'universe/error';
+import { rest } from 'msw';
+import { setupServer } from 'msw/node';
 
 import * as Backend from 'universe/backend';
 
-import type { InternalApi, InternalChapter } from 'universe/backend/db';
+import {
+  InternalApi,
+  InternalChapter,
+  publicApiProjection,
+  toPublicEntry
+} from 'universe/backend/db';
+import { PublicAuthEntry } from 'multiverse/next-auth';
 
 setupMemoryServerOverride();
 useMockDateNow();
 
 const withMockedEnv = mockEnvFactory({ NODE_ENV: 'test' });
+const server = setupServer();
+
+const getCollections = async () => {
+  const db = await getDb({ name: 'hscc-slack' });
+  const apis = db.collection<InternalApi>('apis');
+  const chapters = db.collection<InternalChapter>('chapters');
+
+  return { apis, chapters };
+};
+
+beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
+afterEach(() => server.resetHandlers());
+afterAll(() => server.close());
 
 describe('::getAllApis', () => {
-  it('lists all APIs in the system, including if they are using legacy/next-auth', async () => {
+  it('lists all APIs in the system', async () => {
     expect.hasAssertions();
+
+    await expect(Backend.getAllApis()).resolves.toStrictEqual(
+      dummyAppData.apis.map(toPublicEntry)
+    );
   });
 
   it('does not crash when database is empty', async () => {
     expect.hasAssertions();
-  });
 
-  it('rejects if the invoker does not exist', async () => {
-    expect.hasAssertions();
-  });
-
-  it('does not reject if the invoker is not associated with any chapter', async () => {
-    expect.hasAssertions();
+    await (await getCollections()).apis.deleteMany({});
+    await expect(Backend.getAllApis()).resolves.toStrictEqual([]);
   });
 });
 
 describe('::createApiKey', () => {
   it('creates a new API key if given API name and chapter name', async () => {
     expect.hasAssertions();
+
+    server.use(
+      rest.post(`${dummyAppData.apis[0].baseUri}/sys/auth`, (_, res, ctx) => {
+        return res(ctx.status(200), ctx.json({ something: 'or other' }));
+      })
+    );
+
+    await expect(
+      Backend.createApiKey({
+        api: dummyAppData.apis[0].name,
+        chapter: dummyAppData.chapters[0].name,
+        invoker_user_id: 'U012ABCDEF'
+      })
+    ).resolves.toStrictEqual<PublicAuthEntry>({
+      attributes: { owner: dummyAppData.chapters[0].name },
+      scheme: 'bearer',
+      token: { bearer: expect.any(String) }
+    });
   });
 
   it('creates a new API key if given only API name', async () => {
@@ -57,10 +95,6 @@ describe('::createApiKey', () => {
   });
 
   it('rejects if the specified chapter does not exist', async () => {
-    expect.hasAssertions();
-  });
-
-  it('rejects if the invoker does not exist', async () => {
     expect.hasAssertions();
   });
 
@@ -94,10 +128,6 @@ describe('::getApiKeys', () => {
     expect.hasAssertions();
   });
 
-  it('rejects if the invoker does not exist', async () => {
-    expect.hasAssertions();
-  });
-
   it('rejects if the invoker is not associated with any chapter', async () => {
     expect.hasAssertions();
   });
@@ -121,10 +151,6 @@ describe('::deleteApiKey', () => {
   });
 
   it('rejects if the specified API key does not exist', async () => {
-    expect.hasAssertions();
-  });
-
-  it('rejects if the invoker does not exist', async () => {
     expect.hasAssertions();
   });
 
@@ -158,7 +184,41 @@ describe('::unbanApiKey', () => {
     expect.hasAssertions();
   });
 
-  it('rejects if the invoker does not exist', async () => {
+  it('rejects if the invoker is not associated with any chapter', async () => {
+    expect.hasAssertions();
+  });
+
+  it('rejects if API key is not banned', async () => {
+    expect.hasAssertions();
+  });
+
+  it('only allows primary and secondary admins and sysadmin to unban', async () => {
+    expect.hasAssertions();
+  });
+
+  it('supports multiple unbans in too short a time period from sysadmin', async () => {
+    expect.hasAssertions();
+  });
+});
+
+describe('::unbanIp', () => {
+  it('unbans an ip if given API name and ip', async () => {
+    expect.hasAssertions();
+  });
+
+  it('rejects if too many unban attempts in too short a time period', async () => {
+    expect.hasAssertions();
+  });
+
+  it('rejects if missing either API name and ip', async () => {
+    expect.hasAssertions();
+  });
+
+  it('rejects if the specified API does not exist', async () => {
+    expect.hasAssertions();
+  });
+
+  it('rejects if the specified ip does not exist', async () => {
     expect.hasAssertions();
   });
 
@@ -166,7 +226,7 @@ describe('::unbanApiKey', () => {
     expect.hasAssertions();
   });
 
-  it('rejects if API key is not banned', async () => {
+  it('rejects if ip is not banned', async () => {
     expect.hasAssertions();
   });
 
@@ -201,10 +261,6 @@ describe('::grantPermissions', () => {
   });
 
   it('rejects if the user does not exist', async () => {
-    expect.hasAssertions();
-  });
-
-  it('rejects if the invoker does not exist', async () => {
     expect.hasAssertions();
   });
 
@@ -251,10 +307,6 @@ describe('::revokePermissions', () => {
     expect.hasAssertions();
   });
 
-  it('rejects if the invoker does not exist', async () => {
-    expect.hasAssertions();
-  });
-
   it('rejects if the invoker is not associated with any chapter', async () => {
     expect.hasAssertions();
   });
@@ -282,10 +334,6 @@ describe('::getAllChapters', () => {
     expect.hasAssertions();
   });
 
-  it('rejects if the invoker does not exist', async () => {
-    expect.hasAssertions();
-  });
-
   it('does not reject if the invoker is not associated with any chapter', async () => {
     expect.hasAssertions();
   });
@@ -305,10 +353,6 @@ describe('::createChapter', () => {
   });
 
   it('rejects if a chapter with the specified name already exists', async () => {
-    expect.hasAssertions();
-  });
-
-  it('rejects if the invoker does not exist', async () => {
     expect.hasAssertions();
   });
 

@@ -7,6 +7,7 @@ import { mockEnvFactory } from 'testverse/setup';
 import { setupMemoryServerOverride } from 'multiverse/mongo-test';
 import { getFixtures } from 'testverse/fixtures/integration';
 import { api } from 'testverse/fixtures';
+import { getDb } from 'multiverse/mongo-schema';
 
 import type { TestResultset, TestResult } from 'testverse/fixtures/integration';
 
@@ -32,7 +33,7 @@ memory.idMap = {};
 // ? Fail fast and early
 let lastRunSuccess = true;
 
-describe('generic correctness tests', () => {
+describe('> middleware correctness tests', () => {
   Object.values(api).forEach((endpoint) => {
     it(`${endpoint.uri} fails on bad authentication`, async () => {
       expect.hasAssertions();
@@ -69,135 +70,153 @@ describe('generic correctness tests', () => {
   });
 });
 
-let countSkippedTests = 0;
+describe('> fable integration tests', () => {
+  // ? Clear the request-log so contrived errors are counted properly
+  beforeAll(async () => {
+    await (await getDb({ name: 'root' })).collection('request-log').deleteMany({});
+  });
 
-afterAll(() => {
-  if (countSkippedTests)
-    // eslint-disable-next-line no-console
-    console.warn(`${countSkippedTests} tests were skipped!`);
-});
+  let countSkippedTests = 0;
 
-getFixtures(api).forEach(
-  ({ displayIndex, subject, handler, method, response, body, id, params, invisible }) => {
-    if (!displayIndex) {
-      throw new GuruMeditationError(
-        'fixture is missing required property "displayIndex"'
-      );
-    }
+  afterAll(() => {
+    if (countSkippedTests)
+      // eslint-disable-next-line no-console
+      console.warn(`${countSkippedTests} tests were skipped!`);
+  });
 
-    const shouldSkip =
-      !subject ||
-      !handler ||
-      !method ||
-      (!invisible &&
-        (!response || !['number', 'function'].includes(typeof response.status)));
-
-    // eslint-disable-next-line jest/prefer-expect-assertions
-    it(`${shouldSkip ? '<SKIPPED> ' : ''}${
-      displayIndex <= 0 ? '###' : '#' + displayIndex
-    } ${method ? '[' + method + '] ' : ''}${handler?.uri ? handler.uri + ' ' : ''}${
-      subject || ''
-    }`, async () => {
-      if (shouldSkip || (!lastRunSuccess && process.env.FAIL_FAST)) {
-        countSkippedTests++;
-        return;
+  getFixtures(api).forEach(
+    ({
+      displayIndex,
+      subject,
+      handler,
+      method,
+      response,
+      body,
+      id,
+      params,
+      invisible
+    }) => {
+      if (!displayIndex) {
+        throw new GuruMeditationError(
+          'fixture is missing required property "displayIndex"'
+        );
       }
 
-      expect.hasAssertions();
-      lastRunSuccess = false;
+      const shouldSkip =
+        !subject ||
+        !handler ||
+        !method ||
+        (!invisible &&
+          (!response || !['number', 'function'].includes(typeof response.status)));
 
-      memory.getResultAt = <T = unknown>(
-        index: number | string,
-        prop?: string
-      ): TestResult<T> | T => {
-        const result: TestResult<T> =
-          typeof index == 'string'
-            ? memory.idMap[index]
-            : memory[index + (index < 0 ? displayIndex : 1)];
+      // eslint-disable-next-line jest/prefer-expect-assertions
+      (process.env.RUN_ONLY ? it.only : it)(
+        `${shouldSkip ? '<SKIPPED> ' : ''}${
+          displayIndex <= 0 ? '###' : '#' + displayIndex
+        } ${method ? '[' + method + '] ' : ''}${handler?.uri ? handler.uri + ' ' : ''}${
+          subject || ''
+        }`,
+        async () => {
+          if (shouldSkip || (!lastRunSuccess && process.env.FAIL_FAST)) {
+            countSkippedTests++;
+            return;
+          }
 
-        const retval = prop ? dotPath<T>(result?.json, prop) : result;
+          expect.hasAssertions();
+          lastRunSuccess = false;
 
-        if (!result) {
-          throw new GuruMeditationError(`no result at index "${index}"`);
-        } else if (retval === undefined) {
-          throw new GuruMeditationError(
-            `${prop ? 'prop path "' + prop + '" ' : ''}return value cannot be undefined`
+          memory.getResultAt = <T = unknown>(
+            index: number | string,
+            prop?: string
+          ): TestResult<T> | T => {
+            const result: TestResult<T> =
+              typeof index == 'string'
+                ? memory.idMap[index]
+                : memory[index + (index < 0 ? displayIndex : 1)];
+
+            const retval = prop ? dotPath<T>(result?.json, prop) : result;
+
+            if (!result) {
+              throw new GuruMeditationError(`no result at index "${index}"`);
+            } else if (retval === undefined) {
+              throw new GuruMeditationError(
+                `${
+                  prop ? 'prop path "' + prop + '" ' : ''
+                }return value cannot be undefined`
+              );
+            }
+
+            return retval;
+          };
+
+          const requestParams =
+            typeof params == 'function' ? await params(memory) : params;
+          const requestBody = typeof body == 'function' ? await body(memory) : body;
+
+          await withMockedEnv(
+            async () => {
+              await testApiHandler({
+                handler: handler || toss(new GuruMeditationError()),
+                params: requestParams,
+                requestPatcher: (req) => {
+                  // TODO: need to sign requests using client secret
+                  req.headers['content-type'] = 'application/json';
+                },
+                test: async ({ fetch }) => {
+                  const res = await fetch({
+                    method: method,
+                    ...(requestBody ? { body: JSON.stringify(requestBody) } : {})
+                  });
+
+                  const expectedStatus =
+                    typeof response?.status == 'function'
+                      ? await response.status(res.status, memory)
+                      : response?.status;
+
+                  let json: ReturnType<typeof JSON.parse>;
+
+                  try {
+                    const jsonText = await res.text();
+                    json = `<invalid JSON>${jsonText}`;
+                    json = JSON.parse(jsonText);
+                  } catch {}
+
+                  if (expectedStatus) {
+                    if (res.status != expectedStatus) {
+                      // eslint-disable-next-line no-console
+                      console.warn('unexpected status for result:', json);
+                    }
+
+                    // eslint-disable-next-line jest/no-conditional-expect
+                    expect(res.status).toBe(expectedStatus);
+                    // eslint-disable-next-line jest/no-conditional-expect
+                    expect(json.success)[res.status == 200 ? 'toBeTrue' : 'toBeFalsy']();
+                    delete json.success;
+                  }
+
+                  const expectedJson =
+                    typeof response?.json == 'function'
+                      ? await response.json(json, memory)
+                      : response?.json;
+
+                  if (expectedJson) {
+                    // eslint-disable-next-line jest/no-conditional-expect
+                    expect(json).toStrictEqual(expectedJson);
+                  }
+
+                  const memorize = { status: res.status, json } as TestResult;
+
+                  if (id) memory.idMap[id] = memorize;
+                  memory[displayIndex] = memorize;
+                  memory.latest = memorize;
+                  lastRunSuccess = true;
+                }
+              });
+            },
+            { IGNORE_RATE_LIMITS: 'true' }
           );
         }
-
-        return retval;
-      };
-
-      const requestParams = typeof params == 'function' ? await params(memory) : params;
-      const requestBody = typeof body == 'function' ? await body(memory) : body;
-
-      await withMockedEnv(
-        async () => {
-          await testApiHandler({
-            handler: handler || toss(new GuruMeditationError()),
-            params: requestParams,
-            requestPatcher(req) {
-              // TODO: need to sign requests using client secret
-              void req;
-            },
-            test: async ({ fetch }) => {
-              const res = await fetch({
-                method: method,
-                ...(requestBody
-                  ? {
-                      headers: { 'content-type': 'application/json' },
-                      body: JSON.stringify(requestBody)
-                    }
-                  : {})
-              });
-
-              const expectedStatus =
-                typeof response?.status == 'function'
-                  ? await response.status(res.status, memory)
-                  : response?.status;
-
-              let json: ReturnType<typeof JSON.parse>;
-
-              try {
-                const jsonText = await res.text();
-                json = `<invalid JSON>${jsonText}`;
-                json = JSON.parse(jsonText);
-              } catch {}
-
-              if (expectedStatus) {
-                if (res.status != expectedStatus) {
-                  // eslint-disable-next-line no-console
-                  console.warn('unexpected status for result:', json);
-                }
-
-                // eslint-disable-next-line jest/no-conditional-expect
-                expect(res.status).toBe(expectedStatus);
-                // eslint-disable-next-line jest/no-conditional-expect
-                expect(json.success)[res.status == 200 ? 'toBeTrue' : 'toBeFalsy']();
-                delete json.success;
-              }
-
-              const expectedJson =
-                typeof response?.json == 'function'
-                  ? await response.json(json, memory)
-                  : response?.json;
-
-              if (expectedJson) {
-                // eslint-disable-next-line jest/no-conditional-expect
-                expect(json).toStrictEqual(expectedJson);
-              }
-
-              const memorize = { status: res.status, json } as TestResult;
-
-              if (id) memory.idMap[id] = memorize;
-              memory[displayIndex] = memorize;
-              memory.latest = memorize;
-              lastRunSuccess = true;
-            }
-          });
-        },
-        { IGNORE_RATE_LIMITS: 'true' }
       );
-    });
-  }
-);
+    }
+  );
+});

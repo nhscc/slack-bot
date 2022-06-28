@@ -1,6 +1,6 @@
 /* eslint-disable no-global-assign */
 import { testApiHandler } from 'next-test-api-route-handler';
-import Endpoint, { config as Config } from 'universe/pages/api/ping';
+import Endpoint, { config as Config } from 'universe/pages/api/sys/ping';
 
 const handler = Endpoint as typeof Endpoint & { config?: typeof Config };
 handler.config = Config;
@@ -10,7 +10,7 @@ jest.mock('universe/backend/middleware', () => {
   const { default: handleError } = require('multiverse/next-adhesive/handle-error');
 
   return {
-    withMiddleware: jest
+    withSysMiddleware: jest
       .fn()
       .mockImplementation(middlewareFactory({ use: [], useOnError: [handleError] }))
   };
