@@ -20,7 +20,7 @@ import {
   isAllowedScheme,
   isTokenAttributes,
   isNewAuthEntry,
-  getOwnerEntries,
+  getOwnersEntries,
   deleteEntry,
   createEntry,
   toPublicAuthEntry
@@ -118,6 +118,7 @@ describe('::isTokenAttributes', () => {
     expect(isTokenAttributes({})).toBeFalse();
     expect(isTokenAttributes({ owner: true })).toBeFalse();
     expect(isTokenAttributes({ owner: null })).toBeFalse();
+    expect(isTokenAttributes({ owner: undefined })).toBeFalse();
     expect(isTokenAttributes({ owner: '' })).toBeFalse();
     expect(isTokenAttributes({ owner: 'owner', isGlobalAdmin: 1 })).toBeFalse();
     expect(isTokenAttributes({ owner: 'owner', isGlobalAdmin: 'true' })).toBeFalse();
@@ -141,6 +142,7 @@ describe('::isTokenAttributes', () => {
     expect(isTokenAttributes({}, { patch: true })).toBeTrue();
     expect(isTokenAttributes({ owner: true }, { patch: true })).toBeFalse();
     expect(isTokenAttributes({ owner: null }, { patch: true })).toBeFalse();
+    expect(isTokenAttributes({ owner: undefined }, { patch: true })).toBeTrue();
     expect(isTokenAttributes({ owner: '' })).toBeFalse();
 
     expect(
@@ -825,70 +827,99 @@ describe('::updateAttributes', () => {
   });
 });
 
-describe('::getOwnerEntries', () => {
-  it('returns array of all auth entries owned by the target', async () => {
+describe('::getOwnersEntries', () => {
+  it('returns array of all auth entries owned by the targets', async () => {
     expect.hasAssertions();
 
-    const owner = dummyRootData.auth[0].attributes.owner;
+    const owners = [
+      dummyRootData.auth[0].attributes.owner,
+      dummyRootData.auth[1].attributes.owner
+    ];
 
-    const newAuthEntry: InternalAuthEntry = {
+    const newAuthEntry1: InternalAuthEntry = {
       _id: new ObjectId(),
-      attributes: { owner },
+      attributes: { owner: owners[0] },
       scheme: 'bearer',
       token: { bearer: jest.requireActual('node:crypto').randomUUID() }
     };
 
-    await expect(getOwnerEntries({ owner })).resolves.toStrictEqual([
-      toPublicAuthEntry(dummyRootData.auth[0])
+    const newAuthEntry2: InternalAuthEntry = {
+      _id: new ObjectId(),
+      attributes: { owner: owners[1] },
+      scheme: 'bearer',
+      token: { bearer: jest.requireActual('node:crypto').randomUUID() }
+    };
+
+    await expect(getOwnersEntries({ owners })).resolves.toStrictEqual([
+      toPublicAuthEntry(dummyRootData.auth[0]),
+      toPublicAuthEntry(dummyRootData.auth[1])
     ]);
 
     await (await getDb({ name: 'root' }))
       .collection<InternalAuthEntry>('auth')
-      .insertOne(newAuthEntry);
+      .insertMany([newAuthEntry1, newAuthEntry2]);
 
-    await expect(getOwnerEntries({ owner })).resolves.toStrictEqual([
+    await expect(getOwnersEntries({ owners })).resolves.toStrictEqual([
       toPublicAuthEntry(dummyRootData.auth[0]),
-      toPublicAuthEntry(newAuthEntry)
+      toPublicAuthEntry(dummyRootData.auth[1]),
+      toPublicAuthEntry(newAuthEntry1),
+      toPublicAuthEntry(newAuthEntry2)
+    ]);
+
+    await expect(
+      getOwnersEntries({ owners: [...owners, undefined] })
+    ).resolves.toStrictEqual([
+      toPublicAuthEntry(dummyRootData.auth[0]),
+      toPublicAuthEntry(dummyRootData.auth[1]),
+      toPublicAuthEntry(newAuthEntry1),
+      toPublicAuthEntry(newAuthEntry2)
     ]);
   });
 
-  it('returns empty array if target owner does not exist', async () => {
+  it('returns empty array if target owners do not exist', async () => {
     expect.hasAssertions();
 
-    await expect(getOwnerEntries({ owner: 'does-not-exist' })).resolves.toStrictEqual([]);
+    await expect(getOwnersEntries({ owners: ['does-not-exist'] })).resolves.toStrictEqual(
+      []
+    );
+
+    await expect(
+      getOwnersEntries({ owners: ['does-not-exist-1', 'does-not-exist-2'] })
+    ).resolves.toStrictEqual([]);
   });
 
-  it('returns all auth entries if no owner specified', async () => {
+  it('returns all auth entries if no owners specified', async () => {
     expect.hasAssertions();
 
-    await expect(getOwnerEntries({})).resolves.toStrictEqual(
+    await expect(getOwnersEntries({ owners: [] })).resolves.toStrictEqual(
       dummyRootData.auth.map(toPublicAuthEntry)
     );
 
-    await expect(getOwnerEntries({ owner: undefined })).resolves.toStrictEqual(
+    await expect(getOwnersEntries({ owners: [undefined] })).resolves.toStrictEqual(
       dummyRootData.auth.map(toPublicAuthEntry)
     );
+
+    await expect(
+      getOwnersEntries({ owners: [undefined, undefined] })
+    ).resolves.toStrictEqual(dummyRootData.auth.map(toPublicAuthEntry));
   });
 
   it('rejects if passed invalid data', async () => {
     expect.hasAssertions();
 
-    const errors: [
-      params: Partial<Parameters<typeof getOwnerEntries>[0]>,
-      error: string
-    ][] = [
-      [{ owner: null } as unknown as TokenAttributes, 'invalid owner'],
-      [{ owner: false } as unknown as TokenAttributes, 'invalid owner'],
-      [{ owner: true } as unknown as TokenAttributes, 'invalid owner'],
-      [{ owner: '', isGlobalAdmin: null } as unknown as TokenAttributes, 'invalid owner'],
-      [{ owner: '', isGlobalAdmin: 1 } as unknown as TokenAttributes, 'invalid owner'],
-      [{ owner: '', name: 'owner' } as unknown as TokenAttributes, 'invalid owner'],
-      [{ owner: null } as unknown as TokenAttributes, 'invalid owner']
+    type Params = Parameters<typeof getOwnersEntries>[0];
+
+    const errors: [params: Params, error: string][] = [
+      [{ owners: [false] as unknown as Params['owners'] }, 'invalid owner(s)'],
+      [{ owners: [true] as unknown as Params['owners'] }, 'invalid owner(s)'],
+      [{ owners: [''] }, 'invalid owner(s)'],
+      [{ owners: [5] as unknown as Params['owners'] }, 'invalid owner(s)'],
+      [{ owners: [null] as unknown as Params['owners'] }, 'invalid owner(s)']
     ];
 
     await Promise.all(
       errors.map(async ([params, error]) => {
-        await expect(getOwnerEntries(params)).rejects.toMatchObject({
+        await expect(getOwnersEntries(params as Params)).rejects.toMatchObject({
           message: expect.stringContaining(error)
         });
       })
