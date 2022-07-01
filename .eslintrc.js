@@ -99,7 +99,8 @@ module.exports = {
         'jest/no-commented-out-tests': 'warn',
         'jest/require-hook': 'off',
         'jest/no-alias-methods': 'off',
-        'jest/no-conditional-in-test': 'off'
+        'jest/no-conditional-in-test': 'off',
+        'jest/no-conditional-expect': 'off'
       }
     }
   ],
