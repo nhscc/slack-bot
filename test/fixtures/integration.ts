@@ -119,7 +119,10 @@ export type TestFixture = {
      */
     status?:
       | number
-      | ((status: number, prevResults: TestResultset) => Promisable<number | undefined>);
+      | ((
+          status: number,
+          prevResults: TestResultset
+        ) => Promisable<number | undefined>);
     /**
      * The expected JSON response body. No need to test for `success` as that is
      * handled automatically (unless a status callback was used and it returned
@@ -133,11 +136,15 @@ export type TestFixture = {
       | ((
           json: Record<string, unknown> | undefined,
           prevResults: TestResultset
-        ) => Promisable<Record<string, unknown> | jest.AsymmetricMatcher | undefined>);
+        ) => Promisable<
+          Record<string, unknown> | jest.AsymmetricMatcher | undefined
+        >);
   };
 };
 
-export function getFixtures(api: typeof import('testverse/fixtures').api): TestFixture[] {
+export function getFixtures(
+  api: typeof import('testverse/fixtures').api
+): TestFixture[] {
   const runOnly = process.env.RUN_ONLY?.split(',')
     .flatMap((n) => {
       const range = n
@@ -176,7 +183,8 @@ export function getFixtures(api: typeof import('testverse/fixtures').api): TestF
       if (runOnly && !runOnly.includes(displayIndex)) return false;
       (test as TestFixture).displayIndex = !runOnly
         ? displayIndex
-        : runOnly.shift() ?? toss(new GuruMeditationError('ran out of RUN_ONLY indices'));
+        : runOnly.shift() ??
+          toss(new GuruMeditationError('ran out of RUN_ONLY indices'));
       return true;
     }
   );

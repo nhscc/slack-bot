@@ -113,9 +113,9 @@ describe('> fable integration tests', () => {
       (process.env.RUN_ONLY ? it.only : it)(
         `${shouldSkip ? '<SKIPPED> ' : ''}${
           displayIndex <= 0 ? '###' : '#' + displayIndex
-        } ${method ? '[' + method + '] ' : ''}${handler?.uri ? handler.uri + ' ' : ''}${
-          subject || ''
-        }`,
+        } ${method ? '[' + method + '] ' : ''}${
+          handler?.uri ? handler.uri + ' ' : ''
+        }${subject || ''}`,
         async () => {
           if (shouldSkip || (!lastRunSuccess && process.env.FAIL_FAST)) {
             countSkippedTests++;
@@ -190,7 +190,9 @@ describe('> fable integration tests', () => {
                     // eslint-disable-next-line jest/no-conditional-expect
                     expect(res.status).toBe(expectedStatus);
                     // eslint-disable-next-line jest/no-conditional-expect
-                    expect(json.success)[res.status == 200 ? 'toBeTrue' : 'toBeFalsy']();
+                    expect(json.success)[
+                      res.status == 200 ? 'toBeTrue' : 'toBeFalsy'
+                    ]();
                     delete json.success;
                   }
 

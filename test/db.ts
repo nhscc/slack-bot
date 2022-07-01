@@ -37,7 +37,10 @@ export const dummyAppData: DummyAppData = {
     {
       _id: new ObjectId(),
       name: 'chapter-2',
-      administrators: { primary: ['U345GHIJKL'], secondary: ['U678MNOPQR', 'U012ABCDEF'] }
+      administrators: {
+        primary: ['U345GHIJKL'],
+        secondary: ['U678MNOPQR', 'U012ABCDEF']
+      }
     },
     {
       _id: new ObjectId(),

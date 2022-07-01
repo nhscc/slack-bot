@@ -102,7 +102,10 @@ it('sends 401 on requests with bad auth headers when auth required', async () =>
         expect(res.status).toBe(401);
         await expect(res.json()).resolves.toStrictEqual({
           success: false,
-          error: ErrorMessage.InvalidItem(undefined, 'x-slack-request-timestamp header')
+          error: ErrorMessage.InvalidItem(
+            undefined,
+            'x-slack-request-timestamp header'
+          )
         });
       }
     });
@@ -119,7 +122,10 @@ it('sends 401 on requests with bad auth headers when auth required', async () =>
         expect(res.status).toBe(401);
         await expect(res.json()).resolves.toStrictEqual({
           success: false,
-          error: ErrorMessage.InvalidItem(undefined, 'x-slack-request-timestamp header')
+          error: ErrorMessage.InvalidItem(
+            undefined,
+            'x-slack-request-timestamp header'
+          )
         });
       }
     });
@@ -228,7 +234,8 @@ it('sends 401 on requests with bad auth headers when auth required', async () =>
 it('sends 401 on requests with timestamp auth header older than five minutes ago', async () => {
   expect.hasAssertions();
 
-  const fiveMinAgoPlus1Sec = Math.floor(parseInt(mockSlackTimestamp) / 1000) - 60 * 5 - 1;
+  const fiveMinAgoPlus1Sec =
+    Math.floor(parseInt(mockSlackTimestamp) / 1000) - 60 * 5 - 1;
 
   await withMockEnv(async () => {
     await testApiHandler({

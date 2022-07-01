@@ -80,7 +80,11 @@ module.exports = {
   overrides: [
     {
       files: ['*.test.*'],
-      extends: ['plugin:jest/all', 'plugin:jest/style', 'plugin:jest-dom/recommended'],
+      extends: [
+        'plugin:jest/all',
+        'plugin:jest/style',
+        'plugin:jest-dom/recommended'
+      ],
       rules: {
         'jest/lowercase': 'off',
         'jest/consistent-test-it': 'off',

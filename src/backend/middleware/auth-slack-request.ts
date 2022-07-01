@@ -140,7 +140,8 @@ async function isValidSlackRequest(
       )
     );
 
-    const valid = reqSignatureHash.toLowerCase() === computedSignatureHash.toLowerCase();
+    const valid =
+      reqSignatureHash.toLowerCase() === computedSignatureHash.toLowerCase();
 
     return valid
       ? {
