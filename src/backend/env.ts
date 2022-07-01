@@ -13,7 +13,8 @@ export function getEnv<T extends Environment = Environment>() {
     SLACK_CLIENT_SECRET: process.env.SLACK_CLIENT_SECRET || '',
     SLACK_SIGNING_SECRET: process.env.SLACK_SIGNING_SECRET || '',
     SLACK_SYSADMIN_USER_ID: process.env.SLACK_SYSADMIN_USER_ID || '',
-    HSCC_API_GLOBAL_ADMIN_KEY: process.env.HSCC_API_GLOBAL_ADMIN_KEY || ''
+    HSCC_API_GLOBAL_ADMIN_KEY: process.env.HSCC_API_GLOBAL_ADMIN_KEY || '',
+    SYSADMIN_SLACK_USER_ID: process.env.SYSADMIN_SLACK_USER_ID || ''
   });
 
   // TODO: retire all of the following logic when expect-env is created. Also,
@@ -46,10 +47,16 @@ export function getEnv<T extends Environment = Environment>() {
       errors.push('bad HSCC_API_GLOBAL_ADMIN_KEY');
     }
 
+    if (!env.SYSADMIN_SLACK_USER_ID) {
+      errors.push('bad SYSADMIN_SLACK_USER_ID');
+    }
+
     // TODO: make it easier to reuse error code from getDefaultEnv. Or is it
     // TODO: obsoleted by expect-env package? Either way, factor this logic out!
     if (errors.length) {
-      throw new InvalidAppEnvironmentError(`bad variables:\n - ${errors.join('\n - ')}`);
+      throw new InvalidAppEnvironmentError(
+        `bad variables:\n - ${errors.join('\n - ')}`
+      );
     }
   }
 
