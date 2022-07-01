@@ -341,7 +341,11 @@ export async function jsonFetch<
   }
 
   if (parseError && responseContentType == JsonContentType) {
-    throw new JsonFetchError(res, json, `failed to parse response body: ${parseError}`);
+    throw new JsonFetchError(
+      res,
+      json,
+      `failed to parse response body: ${parseError}`
+    );
   }
 
   if (responseContentType != JsonContentType || parseError) {

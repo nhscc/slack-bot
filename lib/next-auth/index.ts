@@ -542,7 +542,8 @@ export async function getAttributes<T extends TokenAttributes>({
         // ? To hit the index, order matters
         { scheme, token },
         { projection: { _id: false, attributes: true } }
-      )) || toss(new InvalidSecretError('authentication scheme and token combination'));
+      )) ||
+    toss(new InvalidSecretError('authentication scheme and token combination'));
 
   return attributes;
 }
@@ -606,7 +607,9 @@ export async function getOwnersEntries({
 }): Promise<PublicAuthEntry[]> {
   const owners = rawOwners.filter((owner): owner is string => owner !== undefined);
 
-  const isValidOwnerArray = (owners: unknown[]): owners is TokenAttributes['owner'][] => {
+  const isValidOwnerArray = (
+    owners: unknown[]
+  ): owners is TokenAttributes['owner'][] => {
     return owners.every((owner) => isTokenAttributes({ owner }));
   };
 
@@ -652,7 +655,9 @@ export async function createEntry({
     };
 
     try {
-      await (await getDb({ name: 'root' })).collection('auth').insertOne({ ...newEntry });
+      await (await getDb({ name: 'root' }))
+        .collection('auth')
+        .insertOne({ ...newEntry });
     } catch (e) {
       /* istanbul ignore else */
       if (e instanceof MongoServerError && e.code == 11000) {

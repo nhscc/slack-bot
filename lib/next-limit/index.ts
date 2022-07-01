@@ -102,11 +102,14 @@ export async function removeRateLimit({
 }
 
 /**
- *
+ * Retrieve all active rate limits.
  */
 export async function getAllRateLimits() {
   return (await getDb({ name: 'root' }))
     .collection<InternalLimitedLogEntry>('limited-log')
-    .find({}, { sort: { _id: -1 }, projection: { _id: false } })
+    .find<WithoutId<InternalLimitedLogEntry>>(
+      { until: { $gt: Date.now() } },
+      { sort: { _id: -1 }, projection: { _id: false } }
+    )
     .toArray();
 }
